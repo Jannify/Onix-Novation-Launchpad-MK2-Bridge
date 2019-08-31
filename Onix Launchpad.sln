@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29215.179
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Onix Launchpad", "Onix Launchpad\Onix Launchpad.csproj", "{61828944-B92E-4C13-A1BA-4AC7C5917591}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{61828944-B92E-4C13-A1BA-4AC7C5917591}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61828944-B92E-4C13-A1BA-4AC7C5917591}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61828944-B92E-4C13-A1BA-4AC7C5917591}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61828944-B92E-4C13-A1BA-4AC7C5917591}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1EB21C90-C88B-4264-9A25-075D0C7F3CD7}
+	EndGlobalSection
+EndGlobal
