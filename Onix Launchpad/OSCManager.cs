@@ -32,14 +32,14 @@ namespace Onix_Launchpad
                         OSCMessage msg = obj as OSCMessage;
                         try
                         {
-                            InputAction inputAction;
+                            DeviceAction deviceAction;
                             string action = msg.Address.Split('/')[1];
                             int data = int.Parse(msg.Address.Split('/')[2]);
-                            if (action == "fader") inputAction = InputAction.FaderInput;
+                            if (action == "fader") deviceAction = DeviceAction.FaderSlider;
                             else return;
 
                             _queue.Enqueue(msg);
-                            Programm.onDeviceEvent(inputAction, new int[1]); //TODO: msg Data 
+                            Programm.onDeviceEvent(Device.Onix, deviceAction, new int[1]); //TODO: msg Data 
                         }
                         catch { Console.WriteLine("Error on OSC Packet reading"); }
                 }
@@ -49,6 +49,10 @@ namespace Onix_Launchpad
                     _queue.Enqueue(packet as OSCMessage);
                 }
             }
+        }
+        public void processPacket(InputOutputItem item, int[] eventPacket)
+        {
+            if (item.deviceAction == DeviceAction.FaderSlider) OSCHandler.Instance.SendMessageToClient("UnityOSC", "/Mx/fader/" + item.inputParams[0], eventPacket[0]);
         }
     }
 }

@@ -1,13 +1,14 @@
 ﻿using IntelOrca.Launchpad;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Onix_Launchpad
 {
     public class MidiManager
     {
         private LaunchpadDevice launchpad = new LaunchpadDevice();
-        private Dictionary<int[], InputAction> keyActions = new Dictionary<int[], InputAction>();
+        private Dictionary<int[], DeviceAction> keyActions = new Dictionary<int[], DeviceAction>(); //int[]: 0=x, 1=y, 3=yMax
 
         public MidiManager()
         {
@@ -15,7 +16,7 @@ namespace Onix_Launchpad
             {
                 launchpad = new LaunchpadDevice();
                 launchpad.DoubleBuffered = true;
-                launchpad.ButtonPressed
+                launchpad.ButtonPressed += packetRecievedEvent;
 
                 Console.WriteLine("Launchpad found");
             }
@@ -26,17 +27,30 @@ namespace Onix_Launchpad
             }
         }
 
-        void packetRecievedEvent(ButtonPressEventArgs eventArgs)
+        void packetRecievedEvent(object sender, ButtonPressEventArgs eventArgs)
         {
-                        try
-                        {
+            try
+            {
                 int[] coords = new int[] { eventArgs.X, eventArgs.Y };
-                            Programm.onDeviceEvent(keyActions[new int[] { eventArgs.X, eventArgs.Y }], new int[] { eventArgs.X, eventArgs.Y }); //TODO: msg Data 
-                        }
-                        catch { Console.WriteLine("Error on OSC Packet reading"); }
+                Programm.onDeviceEvent(Device.Launchpad, keyActions[new int[] { eventArgs.X, eventArgs.Y }], new int[] { eventArgs.X, eventArgs.Y }); //TODO: msg Data 
+            }
+            catch { Console.WriteLine("Error on OSC Packet reading"); }
         }
 
-        public void addButtonAction(int x, int y, InputAction inputAction) => keyActions.Add(new int[] { x, y }, inputAction);
+        public void processPacket(InputOutputItem item, int[] eventPacket)
+        {
+            if (item.deviceAction == DeviceAction.FaderSlider)
+            {
+                int[] barY = keyActions.Where(x => x.Value == DeviceAction.FaderSlider && x.Key[0] == item.outputParams[0]).Select(x => new int[] { x.Key[1], x.Key[2] }).FirstOrDefault();
+                int ledToLit = (int)((barY[1] - barY[0]) / 100f * (float)eventPacket[0]);
+                for (int i = 0; i < ledToLit; i++)
+                {
+                    launchpad[item.outputParams[0], barY[0] + i].SetColor(ButtonColor.Red);
+                }
+            }
+        }
+
+        public void addButtonAction(int x, int y, DeviceAction deviceAction) => keyActions.Add(new int[] { x, y }, deviceAction);
         public void removeButtonAction(int x, int y) => keyActions.Remove(new int[] { x, y });
 
         public void setFader(int row, float value)
