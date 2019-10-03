@@ -80,7 +80,7 @@ public class OSCHandler
 	private static OSCHandler _instance = null;
 	private Dictionary<string, ClientLog> _clients = new Dictionary<string, ClientLog>();
 	private Dictionary<string, ServerLog> _servers = new Dictionary<string, ServerLog>();
-    public OSCServer server;
+    public OSCReciever reciever;
     public List<OSCPacket> packets = new List<OSCPacket>();
 
 	
@@ -94,9 +94,10 @@ public class OSCHandler
 	public void Init()
 	{
         //Initialize OSC clients (transmitters)
-        CreateClient("UnityOSC", IPAddress.Parse("192.168.100.145"), 8000);
+        CreateClient("UnityOSC", IPAddress.Parse("192.168.2.202"), 8000);
         //Initialize OSC servers (listeners)
-        server = CreateServer("Onix", 9000);
+        reciever = new OSCReciever();
+        reciever.Open(9000);
     }
 
     #region Properties

@@ -1,58 +1,73 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityOSC;
 
 namespace Onix_Launchpad
 {
     public class OSCManager
     {
-        Queue<OSCMessage> _queue = new Queue<OSCMessage>();
-
         public OSCManager()
         {
             OSCHandler.Instance.Init();
-            OSCHandler.Instance.server.PacketReceivedEvent += packetRecievedEvent;
+
+            Task<bool> updateTask = Update();
         }
 
-        public void Touch()
+        async Task<bool> Update()
         {
-            OSCHandler.Instance.SendMessageToClient("UnityOSC", "/Mx/fader/4203", 0);
-        }
-
-        void packetRecievedEvent(OSCServer sender, OSCPacket packet)
-        {
-            lock (_queue)
+            while (true)
             {
-                if (packet.IsBundle())
+                while(OSCHandler.Instance.reciever.hasWaitingMessages())
                 {
-                    var bundle = packet as OSCBundle;
+                    processOSCMessage(OSCHandler.Instance.reciever.getNextMessage());
+                }
 
-                    foreach (object obj in bundle.Data)
-                    {
-                        OSCMessage msg = obj as OSCMessage;
-                        try
-                        {
-                            DeviceAction deviceAction;
-                            string action = msg.Address.Split('/')[1];
-                            int data = int.Parse(msg.Address.Split('/')[2]);
-                            if (action == "fader") deviceAction = DeviceAction.FaderSlider;
-                            else return;
-
-                            _queue.Enqueue(msg);
-                            Programm.onDeviceEvent(Device.Onix, deviceAction, new int[1]); //TODO: msg Data 
-                        }
-                        catch { Console.WriteLine("Error on OSC Packet reading"); }
-                }
-                }
-                else
-                {
-                    _queue.Enqueue(packet as OSCMessage);
-                }
+                await Task.Delay(5); // arbitrary delay
             }
         }
-        public void processPacket(InputOutputItem item, int[] eventPacket)
+
+        private void processOSCMessage(OSCMessage message)
         {
-            if (item.deviceAction == DeviceAction.FaderSlider) OSCHandler.Instance.SendMessageToClient("UnityOSC", "/Mx/fader/" + item.inputParams[0], eventPacket[0]);
+            Console.WriteLine(string.Format("message received: {0} {1}", message.Address, ListToString(message.Data)));
+
+            DeviceAction deviceAction = DeviceAction.None;
+            int data = -1;
+            if (message.Address.Contains("Text")) return;
+            try
+            {
+                string[] address = message.Address.Split('/');
+                string action = address[2];
+                data = int.Parse(address[3]);
+                if (action == "fader" && address.Length == 4) deviceAction = DeviceAction.FaderSlider;
+                else return;
+            }
+            catch { Console.WriteLine("Error on OSC Packet processing. Unknow packet?"); }
+
+            Programm.onDeviceEvent(Device.Launchpad, deviceAction, new int[] { data }, message.Data.ToArray());
+        }
+        public void processPacket(InputOutputItem item, object[] eventPacket)
+        {
+            if (item.deviceAction == DeviceAction.FaderSlider)
+            {
+                int value;
+                int valuewdwdw;
+                int buttonY = int.Parse(eventPacket[1].ToString());
+
+                OSCHandler.Instance.SendMessageToClient("UnityOSC", "/Mx/fader/" + item.oscParams[0], (int)Math.Round(buttonY / (float)item.midiParams[2] * 255));
+            }
+        }
+
+        private string ListToString(List<object> input)
+        {
+            string output = "";
+
+            foreach (object value in input)
+            {
+                output += value.ToString();
+            }
+
+            return output;
         }
     }
 }

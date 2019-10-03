@@ -8,74 +8,102 @@ namespace Onix_Launchpad
 {
     class Programm
     {
-        public static MainWindow mainWindow;
+        //public static MainWindow mainWindow;
         public static OSCManager oscManager;
         public static MidiManager midiManager;
 
-        private static List<InputOutputItem> items = new List<InputOutputItem>();
+        private static List<InputOutputItem> items;
 
-        public List<InputOutputItem> Items { get => items; }
+        public static List<InputOutputItem> Items { get => items; }
 
-        public Programm()
+       private static string saveDataPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "/data.json";
+
+        static void Main(string[] args)
         {
             loadItemList();
-            oscManager = new OSCManager();
-            midiManager = new MidiManager();
+            try { oscManager = new OSCManager(); }
+            catch { Console.WriteLine("Failed to load OSC Manager."); }
 
-            addInputOutputItem(Device.Onix, DeviceAction.FaderSlider, new int[] { 4203 }, new int[] { 1 });   
+            try { midiManager = new MidiManager(); }
+            catch { Console.WriteLine("Failed to load OSC Manager."); }
+
+            //saveItemList(); //Manual saveData
+            Console.ReadKey();
         }
 
-        private void loadItemList()
+        private static void loadItemList()
         {
             try
             {
-                string data = File.ReadAllText(System.Reflection.Assembly.GetExecutingAssembly().Location);
+                string data = File.ReadAllText(saveDataPath);
                 items = (List<InputOutputItem>)JsonConvert.DeserializeObject(data);
             }
-            catch { Console.WriteLine("Unable to load Data"); }
+            catch (Exception e) { Console.WriteLine("Unable to load Data" + e); }
         }
-        private void saveItemList()
+        private static void saveItemList()
         {
             try
             {
                 string data = JsonConvert.SerializeObject(items);
-                File.WriteAllText(System.Reflection.Assembly.GetExecutingAssembly().Location, data);
+                if (!File.Exists(saveDataPath)) File.Create(saveDataPath);
+                File.WriteAllText(saveDataPath, data);
             }
-            catch { Console.WriteLine("Unable to save Data"); }
+            catch (Exception e) { Console.WriteLine("Unable to save Data" + e); }
         }
 
-        private void addInputOutputItem(Device device, DeviceAction deviceAction, int[] inputParams, int[] outputParams)
+        ////private static void addInputOutputItem(DeviceAction deviceAction, int[] oscParams, int[] midiParams)
+        ////{
+        ////    items.Add(new InputOutputItem(deviceAction, oscParams, midiParams));
+        ////    //midiManager.addButtonAction(deviceAction, midiParams);
+        ////}
+
+        /// <summary>
+        /// Sends Event to target device.
+        /// </summary>
+        /// <param name="targetDevice">Target Device</param>
+        /// <param name="deviceAction">Trigger</param>
+        /// <param name="inputParams">Parameter of coresponding InputOutputItem</param>
+        /// <param name="eventData">Data of the event.</param>
+        public static void onDeviceEvent(Device targetDevice, DeviceAction deviceAction, int[] inputParams, object[] eventData)
         {
-            items.Add(new InputOutputItem(device, deviceAction, inputParams, outputParams));
-            if (device == Device.Launchpad) midiManager.addButtonAction(inputParams[0], inputParams[1], deviceAction);
+            try
+            {
+                InputOutputItem item = items.Where(x => x.deviceAction == deviceAction && (x.oscParams.SequenceEqual(inputParams) || x.midiParams.SequenceEqual(inputParams))).FirstOrDefault();
+                if (item != null)
+                {
+                    if (targetDevice == Device.Onix) oscManager.processPacket(item, eventData);
+                    else if (targetDevice == Device.Launchpad) midiManager.processPacket(item, eventData);
+                }
+            }
+            catch { Console.WriteLine("Error in Event-Manager in Programm.cs"); }
         }
 
-        public static void onDeviceEvent(Device device, DeviceAction deviceAction, int[] eventData)
+        public static void catchFatalException(string msg, Exception e)
         {
-            InputOutputItem item = (InputOutputItem)items.Where(x => x.deviceAction == deviceAction && x.device == device);
-            if (device == Device.Onix) midiManager.processPacket(item, eventData);
-            else if (device == Device.Launchpad) oscManager.processPacket(item, eventData);
+            Console.WriteLine(msg);
+            Console.WriteLine(e);
+            Console.WriteLine("Press any Key to close.");
+            Console.ReadKey();
         }
     }
 
     public class InputOutputItem
     {
-        public readonly Device device;
         public readonly DeviceAction deviceAction;
-        public readonly int[] inputParams;
-        public readonly int[] outputParams;
+        public readonly int[] oscParams;
+        public readonly int[] midiParams;
 
-        /// <param name="_device">Input Device</param>
-        /// <param name="_inputAction">Input Trigger Action</param>
-        /// <param name="_inputData">Param from Input Trigger</param>
-        /// <param name="_outputAction">Action to trigger</param>
-        /// <param name="_outputData">Param for Action</param>
-        public InputOutputItem(Device _device, DeviceAction _deviceAction, int[] _inputParams, int[] _outputParams)
+        /// <summary>
+        /// Bidirectional Input-Output-Item. Links DeviceAction to Action-ID (Onix) and Button-Coords (Launchpad).
+        /// </summary>
+        /// <param name="_deviceAction">Trigger/Processor (Like FaderValueChange)</param>
+        /// <param name="_oscParams">Button/Fader ID (starting with 4201)</param>
+        /// <param name="_midiParams">Coords of Launchpad Button(s) [0]=x [1]=y [2]=yMax</param>
+        public InputOutputItem(DeviceAction _deviceAction, int[] _oscParams, int[] _midiParams)
         {
-            device = _device;
             deviceAction = _deviceAction;
-            inputParams = _inputParams;
-            outputParams = _outputParams;
+            oscParams = _oscParams;
+            midiParams = _midiParams;
         }
     }
     public enum Device
@@ -85,6 +113,7 @@ namespace Onix_Launchpad
     }
     public enum DeviceAction
     {
+        None,
         FaderSlider,
         FaderCueGo,
         FaderCueRelease,

@@ -31,12 +31,6 @@ namespace UnityOSC
 
         public void Open(int port)
         {
-#if UNITY_EDITOR
-            if(PlayerSettings.runInBackground == false)
-            {
-                Debug.LogWarning("Recommend PlayerSettings > runInBackground = true");
-            } 
-#endif
             if (_server != null)
             {
                 _server.Close();
